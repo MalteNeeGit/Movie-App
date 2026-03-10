@@ -2,7 +2,7 @@
 import statistics
 import random
 import matplotlib.pyplot as plt
-import movie_storage_sql as storage
+from storage import movie_storage_sql as storage
 import API
 import html_generator
 

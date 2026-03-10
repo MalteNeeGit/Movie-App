@@ -1,4 +1,5 @@
-import movie_storage_sql as storage
+from storage import movie_storage_sql as storage
+import os
 
 def read_html_template():
     with open("index_template.html", "r") as fileobj:
@@ -29,9 +30,10 @@ def generate_movie_grid(movies):
 
 def generate_website():
     html_text = read_html_template()
-    html_text = replace_title_information(html_text, "My Movies")
+    html_text = replace_title_information(html_text, "Movie-App | The Watchlist Manager")
     movies = storage.list_movies()
     movie_grid = generate_movie_grid(movies)
     html_text = html_text.replace("__TEMPLATE_MOVIE_GRID__", movie_grid)
     write_new_html(html_text)
+    print(f"Website generated at: {os.path.abspath('index.html')}")
 

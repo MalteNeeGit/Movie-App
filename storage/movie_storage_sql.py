@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine, text
 
 # Define the database URL
-DB_URL = "sqlite:///movies.db"
+DB_URL = "sqlite:///data/movies.db"
 
 # Create the engine
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL, echo=False)
 
 # Create the movies table if it does not exist
 with engine.connect() as connection:
