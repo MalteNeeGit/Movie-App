@@ -64,5 +64,3 @@ python main.py
 `Python 3` · `SQLite` · `SQLAlchemy` · `OMDb API` · `Matplotlib` · `python-dotenv`
 
 ---
-
-*Made by Malte Neemann*
