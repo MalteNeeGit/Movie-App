@@ -8,7 +8,7 @@ body {
   padding: 60px 0;
   background-image:
     linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.5)),
-    url("assets/banner.png");
+    url("../../assets/banner.png");
   background-size: 120%;
   background-position: center 15%;
   color: white;

@@ -1,4 +1,6 @@
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError, OperationalError
+
 
 # Define the database URL
 DB_URL = "sqlite:///data/movies.db"
@@ -36,21 +38,30 @@ def add_movie(title, year, rating, poster):
             connection.commit()
             print(f"Movie '{title}' added successfully.")
             return True
-        except Exception as e:
-            print(f"Error: {e}")
+        except IntegrityError:
+            connection.rollback()
+            print(f"Error: Movie '{title}' already exists (unique constraint).")
+            return False
+        except OperationalError as e:
+            connection.rollback()
+            print(f"Error: Database connection issue: {e}")
             return False
 
 def delete_movie(title):
     """Delete a movie from the database."""
     with engine.connect() as connection:
         try:
-            connection.execute(text("DELETE FROM movies WHERE LOWER(title) = (:title)"),
+            result = connection.execute(text("DELETE FROM movies WHERE LOWER(title) = (:title)"),
                                     {"title" : title})
             connection.commit()
+            if result.rowcount == 0:
+                return False  # Film wurde nicht gefunden
+
             print(f"Movie '{title}' deleted successfully.")
             return True
-        except Exception as e:
-            print(f"Error: {e}")
+        except OperationalError as e:
+            connection.rollback()
+            print(f"Error: Database connection issue: {e}")
             return False
 
 
@@ -58,13 +69,15 @@ def update_movie(title, rating):
     """Update a movie's rating in the database."""
     with engine.connect() as connection:
         try:
-            connection.execute(text("UPDATE movies SET rating = (:rating) WHERE LOWER(title) = (:title)"),
+            result = connection.execute(text("UPDATE movies SET rating = (:rating) WHERE LOWER(title) = (:title)"),
                                     {"title" : title, "rating" : rating})
             connection.commit()
+            if result.rowcount == 0:
+                return False  # Film wurde nicht gefunden
             print(f"Movie '{title}' updated successfully with rating of {rating}.")
             return True
-        except Exception as e:
-            print(f"Error: {e}")
+        except OperationalError as e:
+            connection.rollback()
+            print(f"Error: Database connection issue: {e}")
             return False
-
 

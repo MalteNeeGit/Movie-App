@@ -46,6 +46,7 @@ def get_user_choice():
     return choice
 
 def press_enter_to_continue():
+    """Pauses the program until the user presses enter."""
     input(YELLOW + "Press enter to continue..." + RESET)
 
 #VALID RATING:
@@ -53,30 +54,30 @@ def is_valid_rating(rating):
     """
     validates the input of rating in a certain range
     """
-    if 0 <= float(rating) <= 10:
-        return True
-    else:
-        return False
+    return 0 <= float(rating) <= 10
+
 
 #VALID YEAR:
 def is_valid_year(year):
     """
     validates the input of year in a certain range
     """
-    if 1888 <= int(year[:4]) <= 2027:
-        return True
-    else:
-        return False
+    return 1888 <= int(year[:4]) <= 2027
 
 #VALID MOVIE TITLE:
 def is_valid_title(title):
     """
     validates the input of title as its not empty
     """
-    if title != "":
-        return True
-    else:
-        return False
+    return title != ""
+
+def get_valid_title(prompt):
+    """Asks for a title until a non-empty one is given."""
+    while True:
+        title = input(prompt).strip()
+        if is_valid_title(title):
+            return title
+        print(f"{RED}Title cannot be empty!{RESET}")
 
 #FILME AUFLISTEN
 def list_of_all_movies():
@@ -87,7 +88,7 @@ def list_of_all_movies():
     print(GREEN + f"------{len(movies)} Movies in total------" + RESET)
 
     for title, info in movies.items():
-        print(f"{title} {BLUE} ({info["year"]}) {RESET}: {info["rating"]}")
+        print(f"{title} {BLUE} ({info['year']}) {RESET}: {info['rating']}")
 
 #FILM HINZUFÜGEN
 def add_movie_and_rating_and_year():
@@ -95,12 +96,7 @@ def add_movie_and_rating_and_year():
     adds the movie with information from OMDb API
     """
     #Validating the user input
-    while True:
-        title_to_search = input(CYAN + "Enter movie to add: " + RESET)
-        if is_valid_title(title_to_search):
-            break
-        else:
-            print(f"{RED}Title can not be empty{RESET}")
+    title_to_search = get_valid_title(CYAN + "Enter movie to add: " + RESET)
 
     #Asking the api for the Movie
     result = API.users_movie_choice(title_to_search)
@@ -126,107 +122,100 @@ def add_movie_and_rating_and_year():
 
 #FILM LÖSCHEN
 def delete_movie():
-    """
-    deletes the movie with information (rating and year)
-    """
-
-    movie_to_delete = input(CYAN + "Enter movie to delete: " + RESET)
-    movie_to_delete_lower = movie_to_delete.lower()
-    success_title = is_valid_title(movie_to_delete_lower)
-
-    if success_title:
-        success = storage.delete_movie(movie_to_delete_lower)
-
-        if success:
-            print(GREEN + f"{movie_to_delete} was deleted" + RESET)
-        else:
-            print(RED + "Movie not found :-(" + RESET)
+    """Deletes a movie from the database."""
+    movie_to_delete = get_valid_title(CYAN + "Enter movie to delete: " + RESET)
+    success = storage.delete_movie(movie_to_delete.lower())
+    if success:
+        print(GREEN + f"{movie_to_delete} was deleted" + RESET)
     else:
-        print(f"{RED}Title can not be empty{RESET}")
+        print(RED + "Movie not found :-(" + RESET)
+
 
 #FILME AKTUALISIEREN
 def update_movie():
     """
     updates existing movie with new information (rating)
     """
+    movie_to_update = get_valid_title(CYAN + "Enter movie to update: " + RESET)
+
     while True:
         try:
-            movie_to_update = input(CYAN + "Enter movie to update: " + RESET)
-            movie_to_update_lower = movie_to_update.lower()
             new_rating = float(input(CYAN + "Enter new rating: " + RESET))
-            # VALIDATION
-            success_title = is_valid_title(movie_to_update_lower)
-            success_rating = is_valid_rating(new_rating)
-            if success_rating and success_title:
+            if is_valid_rating(new_rating):
                 break
-            else:
-                if not success_title:
-                    print(f"{RED}Title can not be empty{RESET}")
-                if not success_rating:
-                    print(f"{RED}Enter any rating from 0 to 10{RESET}")
+            print(f"{RED}Enter any rating from 0 to 10{RESET}")
         except ValueError:
             print(f"{RED}We need a number for the rating{RESET}")
 
-    success = storage.update_movie(movie_to_update_lower, new_rating)
+    success = storage.update_movie(movie_to_update.lower(), new_rating)
 
     if success:
         print(GREEN + f"{movie_to_update} updated with {new_rating}" + RESET)
     else:
         print(RED + "Movie not in Database :-(" + RESET)
 
-#STATISTIKEN
-def stats_of_movies():
-    """
-    shows stats of the movies in database.
-    1. Average      2. Median       3. Best movie(s)        4. Worst Movies(s)
-    """
-    print(GREEN + "------Stats of Movie-Database:------" + RESET)
-    movies = storage.list_movies()
+def get_ratings_and_extremes(movies):
+    """Collects ratings, best and worst movies in a single loop."""
     ratings = []
     best_rating = 0
-    best_movies = []
     worst_rating = 10
+    best_movies = []
     worst_movies = []
 
-    #If Database is empty we leave directly
-    if len(movies) == 0:
-        print(f"{RED}No movies in database!{RESET}")
-        return
-
-    #COLLECTING RATINGS
     for title, info in movies.items():
         rating = float(info["rating"])
         ratings.append(rating)
         if rating > best_rating:
             best_rating = rating
+            best_movies = [title]        # Restart list
+        elif rating == best_rating:
+            best_movies.append(title)    # if even, take both
         if rating < worst_rating:
             worst_rating = rating
-
-    #COLLECTING TITLES
-    for title, info in movies.items():
-        if info["rating"] == best_rating:
-            best_movies.append(title)
-        if info["rating"] == worst_rating:
+            worst_movies = [title]
+        elif rating == worst_rating:
             worst_movies.append(title)
 
-    #AVERAGE
-    average = round(sum(ratings) / len(movies), 2)
-    print(f"Average rating: {average}")
-    #MEDIAN
-    median = statistics.median(ratings)
-    print(f"Median rating: {median}")
-    #BEST OR WORSTMOVIE:
-    print_best_or_worst_movies(best_movies, best_rating, "Best")
-    print_best_or_worst_movies(worst_movies, worst_rating, "Worst")
+    return ratings, best_movies, best_rating, worst_movies, worst_rating
 
-#HELPER FUNKTION FOR STATS_OF_MOVIES
+def calculate_average(ratings):
+    """Returns the average rating."""
+    return round(sum(ratings) / len(ratings), 2)
+
+def calculate_median(ratings):
+    """Returns the median rating."""
+    return statistics.median(ratings)
+
+#HELPER FUNKTION FOR PRINTING STATS_OF_MOVIES
 def print_best_or_worst_movies(movies_list, rating, label):
+    """Prints best or worst movies with their rating."""
     if len(movies_list) == 1:
         print(f"{label} Movie: {movies_list[0]} with a rating of: {rating}")
     else:
         print(f"{label} Movies (with a rating of: {rating})")
         for movie in movies_list:
             print(f"-- \t {movie}")
+
+
+#STATISTIKEN
+def stats_of_movies():
+    """
+    shows stats of the movies in database.Orchestrates the helper functions.
+    1. Average      2. Median       3. Best movie(s)        4. Worst Movies(s)
+    """
+    print(GREEN + "------Stats of Movie-Database:------" + RESET)
+    movies = storage.list_movies()
+
+    if len(movies) == 0:
+        print(f"{RED}No movies in database!{RESET}")
+        return
+
+    ratings, best_movies, best_rating, worst_movies, worst_rating = get_ratings_and_extremes(movies)
+
+    print(f"Average rating: {calculate_average(ratings)}")
+    print(f"Median rating: {calculate_median(ratings)}")
+    print_best_or_worst_movies(best_movies, best_rating, "Best")
+    print_best_or_worst_movies(worst_movies, worst_rating, "Worst")
 
 
 #ZUFALLSFILM
@@ -238,30 +227,24 @@ def random_movie():
         movies = storage.list_movies()
         movie, info = random.choice(list(movies.items()))
         print( GREEN + "------Our random suggestion for you:------" + RESET)
-        print(f"Your movie for tonight: {movie}, its rated {info["rating"]}")
+        print(f"Your movie for tonight: {movie}, its rated {info['rating']}")
     except IndexError:
         print(f"{RED}Database is empty. Please add some movies before.{RESET}")
 
 #FILM SUCHEN
 def search_movie():
-    """
-    case in-sensitive search for movies in the database
-    """
-    word_to_search = input(CYAN + "Enter part of the movie name: " + RESET).lower()
+    """Case insensitive search for movies in the database."""
+    word_to_search = get_valid_title(CYAN + "Enter part of the movie name: " + RESET).lower()
     movies = storage.list_movies()
     movies_found = 0
-    success_titles = is_valid_title(word_to_search)
 
-    if success_titles:
-        for movie, title in movies.items():
-            if word_to_search in movie.lower():
-                movies_found += 1
-                print(f"{movie} \t {BLUE} with a rating of: {movies[movie]["rating"]}, "
-                      f"{RESET} {CYAN} from the year: {movies[movie]["year"]}{RESET}")
-        if movies_found == 0:
-            print(RED + "No movies found :-(" + RESET)
-    else:
-        print(f"{RED}Please enter at least 1 character{RESET}")
+    for movie, title in movies.items():
+        if word_to_search in movie.lower():
+            movies_found += 1
+            print(f"{movie} \t {BLUE} with a rating of: {movies[movie]['rating']}, "
+                  f"{RESET} {CYAN} from the year: {movies[movie]['year']}{RESET}")
+    if movies_found == 0:
+        print(RED + "No movies found :-(" + RESET)
 
 #FILME SORTIEREN UND NACH BEWERTUNG AUSGEBEN
 def movies_based_on_rating():
@@ -304,59 +287,61 @@ def movies_based_on_year():
     for year, movie in movies_as_list_for_year:
         print(f"{movie} : {CYAN}from the year: {RESET}{year}")
 
+def get_validated_float(prompt, allow_empty=True):
+    """Helper funktion, asks or a number, returns none if empty"""
+    while True:
+        user_input = input(prompt)
+        if allow_empty and user_input == "":
+            return None
+        try:
+            return float(user_input)
+        except ValueError:
+            print(f"{RED}Please enter a number!{RESET}")
+
 def filter_movies():
+    """Filters the movies and validates the input.
+    If movies found it returns movies within the 3 criteria"""
     movies = storage.list_movies()
-    #START RATING:
-    while True:
-        try:
-            min_rating_input = input(f"{CYAN}Enter minimum rating (leave blank for no minimum): {RESET}")
-            if min_rating_input == "":
-                min_rating = 0.0
-                break
-            min_rating = float(min_rating_input)
-            break
-        except ValueError:
-            print(f"{RED}Error: Please enter a number for the rating!{RESET}")
 
-    #START YEAR
-    while True:
-        try:
-            start_year_input = input(f"{CYAN}Enter start year (leave blank for no start year): {RESET}")
-            if start_year_input == "":
-                start_year = 0
-                break
-            start_year = int(start_year_input)
-            break
-        except ValueError:
-            print(f"{RED}Error: Please enter a year as a number!{RESET}")
+    # Rating
+    min_rating_input = get_validated_float(
+        f"{CYAN}Enter min rating (empty = no min rating): {RESET}"
+    )
+    if min_rating_input is not None and not is_valid_rating(min_rating_input):
+        print(f"{RED}Rating needs to be between 0 and 10!{RESET}")
+        return
+    min_rating = min_rating_input if min_rating_input is not None else 0.0
 
-    #END YEAR
-    while True:
-        try:
-            end_year_input = input(f"{CYAN}Enter end year (leave blank for no end year): {RESET}")
-            if end_year_input == "":
-                end_year = 9999
-                break
-            end_year = int(end_year_input)
-            break
-        except ValueError:
-            print(f"{RED}Error: Please enter a year as a number!{RESET}")
+    # Startyear
+    start_year_input = get_validated_float(
+        f"{CYAN}Enter a year from which your selection starts (empty = no min year): {RESET}"
+    )
+    if start_year_input is not None and not is_valid_year(str(int(start_year_input))):
+        print(f"{RED}Year must be between 1888 and 2027!{RESET}")
+        return
+    start_year = int(start_year_input) if start_year_input is not None else 1895
 
-    #FILTER MOVIES
+    # Endyear
+    end_year_input = get_validated_float(
+        f"{CYAN}Enter a year for your selection to end (empty = no max year): {RESET}"
+    )
+    if end_year_input is not None and not is_valid_year(str(int(end_year_input))):
+        print(f"{RED}Year must be between 1888 and 2027!{RESET}")
+        return
+    end_year = int(end_year_input) if end_year_input is not None else 2027
+
+    # using the Filters
     print(f"{GREEN}Filtered Movies:{RESET}")
     found = False
-
     for title, info in movies.items():
         rating = info["rating"]
         year = int(str(info["year"])[:4])
-
         if rating >= min_rating and start_year <= year <= end_year:
-
             print(f"{title} ({year}): {rating}")
             found = True
 
     if not found:
-        print(f"{RED}No movies found matching these criteria. {RESET}")
+        print(f"{RED}No Movies found.{RESET}")
 
 
 #HISTOGRAM
